@@ -8,6 +8,8 @@
 goog.provide('shakaDemo.Main');
 
 
+// TODO: video playlist
+
 /**
  * Shaka Player demo, main section.
  * This controls the header and the footer, and contains all methods that should
