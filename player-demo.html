@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Shaka Player compiled library: -->
+    <script src="dist/shaka-player.compiled.js"></script>
+    <script src="https://github.com/videojs/mux.js/releases/latest/download/mux.js"></script>
+    <!-- <script src="dist/mux.js"></script> -->
+    <!-- Your application source: -->
+    <script>
+        var index = -1;
+        var vids = new Array();
+        var vidNames = new Array();
+    </script>
+  </head>
+  <body>
+        <video 
+           id="video"
+           width = "640"
+           onended = "next()"
+           controls autoplay>
+        </video>
+        <p>
+            <input type = "submit" value = "Previous" onclick = "back()"></input><input type = "submit" value = "Next" onclick = "next()"></input>
+        </p>
+        <p>
+            Name:<input type="text" id="vname" name="vname">Video Link:<input type="text" id="link" name="link"><input type = "submit" value = "Play This" onclick = "playlistAdd()"</input>
+        </p>
+        <p id="playlistDisplay"></p>
+  </body>
+</html>
+
+<script>
+    
+    //Video Source upon opening
+    let manifestUri =
+        'https://dash.akamaized.net/dash264/TestCasesIOP41/CMAF/UnifiedStreaming/ToS_AVC_MultiRate_MultiRes_AAC_Eng_WebVTT.mpd';
+
+    function initApp() {
+      // Install built-in polyfills to patch browser incompatibilities.
+      shaka.polyfill.installAll();
+
+      // Check to see if the browser supports the basic APIs Shaka needs.
+      if (shaka.Player.isBrowserSupported()) {
+        // Everything looks good!
+        initPlayer();
+      } else {
+        // This browser does not have the minimum set of APIs we need.
+        console.error('Browser not supported!');
+      }
+}
+
+    async function initPlayer() {
+        // Create a Player instance.
+        const video = document.getElementById('video');
+        const player = new shaka.Player(video);
+        // Attach player to the window to make it easy to access in the JS console.
+        window.player = player;
+        // Listen for error events.
+        player.addEventListener('error', onErrorEvent);
+        // Try to load a manifest.
+        // This is an asynchronous process.
+        try {
+           await player.load(manifestUri);
+           // This runs if the asynchronous load is successful.
+        console.log('The video has now been loaded!');
+        } catch (e) {
+           // onError is executed if the asynchronous load fails.
+           onError(e);
+        }
+    }
+
+    function onErrorEvent(event) {
+        // Extract the shaka.util.Error object from the event.
+        onError(event.detail);
+    }
+
+    function onError(error) {
+        // Log the error.
+        console.error('Error code', error.code, 'object', error);
+    }
+        
+    function next(){
+        //Check if at end of playlist. If not, increment to next video
+        if ((vids.length - 1) != index){
+            index = index + 1;
+        }
+        //Reset playlist to beginning
+        else{
+            index = 0;
+        }
+        manifestUri = vids[index];
+        initPlayer();
+    }
+    
+    function back(){
+        if (index != 0){
+            index = index - 1;
+        }
+        else{
+            index = vids.length - 1;
+        }
+        manifestUri = vids[index];
+        initPlayer();
+    }
+    
+    function playlistAdd(){
+        vids.push(document.getElementById('link').value);
+        if (document.getElementById('vname').value == "")
+            vidNames.push("vid" + vids.length);
+        else
+            vidNames.push(document.getElementById('vname').value);
+        index = vids.length - 2;
+        next();
+        displayPlaylistContents();   
+    }
+    
+    function playlistEmpty(n){
+        vids = [];
+        vidNames = [];
+        displayPlaylistContents();
+    }
+    
+    function playlistRemove(n){
+        //Currently not working
+        vids.splice(index, n);
+        vidNames.splice(index, n);
+        displayPlaylistContents();
+    }
+    
+    function displayPlaylistContents(){
+        var i;
+        var text = "";
+        if (vids.length > 0){
+            text += " <input type = \"submit\" value = \"Delete\" onclick = \"playlistEmpty()\"><br>";
+            for (i = 0; i < vids.length; i++) {
+                var num = ((i + 1)).toString();
+                text += num + ". " + vidNames[i] + "<br>";
+                //text += " <input type = \"submit\" value = \"Delete\" onclick = \"playlistRemove(" + num + ")\"><br>";
+                console.log(i + 1);
+            }
+        }
+        else {
+            text = "Playlist Empty";
+        }
+        document.getElementById("playlistDisplay").innerHTML = text;
+    }
+    
+    document.addEventListener('DOMContentLoaded', initApp);
+</script>
