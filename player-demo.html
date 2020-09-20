@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Shaka Player compiled library: -->
+    <script src="dist/shaka-player.compiled.js"></script>
+    <script src="https://github.com/videojs/mux.js/releases/latest/download/mux.js"></script>
+    <!-- <script src="dist/mux.js"></script> -->
+  </head>
+  <body>
+        <video 
+           id="video"
+           width = "640"
+           preload = "none"
+           onclick = "setClick()" 
+           onplay = "setStart()"
+           onended = "next()"
+           onresize = "resolution()"
+           controls autoplay>
+        </video>
+        <p>
+            <input type = "submit" value = "Previous" onclick = "back()"></input><input type = "submit" value = "Next" onclick = "next()"></input>
+        </p>
+        <p id = "resolution"></p>
+        <p id = "vst"></p>
+        <p>
+            Name:<input type="text" id="vname" name="vname">Video Link:<input type="text" id="link" name="link"><input type = "submit" value = "Add" onclick = "playlistAdd()"</input>
+        </p>
+        <p id="playlistDisplay"></p>
+  </body>
+</html>
+
+<script>
+    
+    //Video Source upon opening
+    let manifestUri =
+        '<!--Enter url of video source here-->'
+    
+    var s;
+    var c;
+    var count = 0;
+    var index = 999;
+    var vids = new Array();
+    var vidNames = new Array();
+
+
+    function initApp() {
+      // Install built-in polyfills to patch browser incompatibilities.
+      shaka.polyfill.installAll();
+
+      // Check to see if the browser supports the basic APIs Shaka needs.
+      if (shaka.Player.isBrowserSupported()) {
+        // Everything looks good!
+        initPlayer();
+      } else {
+        // This browser does not have the minimum set of APIs we need.
+        console.error('Browser not supported!');
+      }
+}
+
+    async function initPlayer() {
+        // Create a Player instance.
+        const video = document.getElementById('video');
+        const player = new shaka.Player(video);
+        // Attach player to the window to make it easy to access in the JS console.
+        window.player = player;
+        // Listen for error events.
+        player.addEventListener('error', onErrorEvent);
+        // Try to load a manifest.
+        // This is an asynchronous process.
+        try {
+           await player.load(manifestUri);
+           // This runs if the asynchronous load is successful.
+        console.log('The video has now been loaded!');
+        } catch (e) {
+           // onError is executed if the asynchronous load fails.
+           onError(e);
+        }
+    }
+
+    function onErrorEvent(event) {
+        // Extract the shaka.util.Error object from the event.
+        onError(event.detail);
+    }
+
+    function onError(error) {
+        // Log the error.
+        console.error('Error code', error.code, 'object', error);
+    }
+        
+    function next(){
+        //Initialize startup time metric tracking
+        setClick();
+        count = 0;
+        //Check if at end of playlist. If not, increment to next video
+        if ((vids.length - 1) > index){
+            index = index + 1;
+        }
+        //Reset playlist to beginning
+        else{
+            index = 0;
+        }
+        //Set the video source and reload
+        manifestUri = vids[index];
+        initPlayer();
+        displayPlaylistContents();
+    }
+    
+    function back(){
+        //Initialize startup time metric tracking
+        setClick();
+        count = 0;
+        //Play the previous video
+        if (index > 0 && vids.length > index ){
+            index = index - 1;
+        }
+        //Play end of playlist if at first
+        else{
+            index = vids.length - 1;
+        }
+        manifestUri = vids[index];
+        initPlayer();
+        displayPlaylistContents();
+    }
+    
+    function playlistAdd(){
+        //Get the value entered in 'link' text box and add to playlist array
+        vids.push(document.getElementById('link').value);
+        //Set name associated with link. If none set to a default value
+        if (document.getElementById('vname').value == "")
+            vidNames.push("vid" + vids.length);
+        else
+            vidNames.push(document.getElementById('vname').value);
+        //Refresh the playlist display
+        displayPlaylistContents();
+    }
+    
+    function playlistEmpty(n){
+        //Delete all entries in the playlist
+        vids = [];
+        vidNames = [];
+        displayPlaylistContents();
+    }
+    
+    function playlistRemove(i){
+        //Deletes a specific item from the playlist and updates display
+        vids.splice(i, 1);
+        vidNames.splice(i, 1);
+        displayPlaylistContents();
+    }
+    
+    function displayPlaylistContents(){
+        var i;
+        var text = "";
+        if (vids.length > 0){
+            text += " <input type = \"submit\" value = \"Clear Playlist\" onclick = \"playlistEmpty()\"><br>";
+            for (i = 0; i < vids.length; i++) {
+                var num = ((i + 1)).toString();
+                if(i == index)
+                    text += num + ". <b>" + vidNames[i] + "</b> <input type = \"submit\" value = \"Delete\" onclick = \"playlistRemove("  + i + ")\"><br>";
+                else{
+                    text += num + ". " + vidNames[i] + " <input type = \"submit\" value = \"Delete\" onclick = \"playlistRemove("  + i + ")\"><br>";
+                }
+            }
+        }
+        else {
+            text = "Playlist Empty";
+        }
+        document.getElementById("playlistDisplay").innerHTML = text;
+    }
+    
+    function setClick(){
+        var clickTime = new Date();
+        c = clickTime.getTime();
+    }
+    
+    function setStart(){
+        if (count == 0){
+            var startTime = new Date();
+            s = startTime.getTime();
+            document.getElementById("vst").innerHTML = "It took " + (s - c) / 1000 + "s to start";
+            count = 1;
+        }
+    }
+    
+    function resolution(){
+        let v = document.getElementById("video");
+
+        let w = v.videoWidth;
+        let h = v.videoHeight;
+
+        v.style.width = w;
+        v.style.height = h;
+        document.getElementById("resolution").innerHTML = "Resolution: " + w + "x" + h + "<br>";
+        
+    }
+
+    
+    document.addEventListener('DOMContentLoaded', initApp);
+</script>
